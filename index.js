@@ -1,13 +1,16 @@
-const tiles = [];
+/**
+ * @type {String[]}
+ */
+let tiles = [];
 
 const TILE_COUNT = 12;
 const LAYERS = 3;
 
 const INITIAL_TILES_MATCH = [
-  {color: '#ffef5e', count: 0},
-  {color: '#5ee2ff', count: 0},
-  {color: '#5effc7', count: 0},
-  {color: '#74ff5e', count: 0},
+  {color: '#ffef5e', count: 0, id: 'yellow'},
+  {color: '#5ee2ff', count: 0, id: 'blue'},
+  {color: '#5effc7', count: 0, id: 'slime'},
+  {color: '#74ff5e', count: 0, id: 'green'},
 ];
 
 const body = document.querySelector('body');
@@ -28,18 +31,41 @@ const clamp = (min, value, max) => {
 /**
  *
  * @param {MouseEvent} event
+ * @param {String} id
  */
-async function tileElementListener(event) {
+async function tileClick(event, id) {
   if (tiles.length >= 7) return;
 
   const {left, top} = tileRetrieverElement.getBoundingClientRect();
   event.target.style.top = `${top + 10}px`;
   event.target.style.left = `${10 + left + 110 * tiles.length}px`;
-  tiles.push(1);
-  await new Promise((res) => setTimeout(res, 1000));
+  tiles.push(id);
   event.target.style.position = 'static';
   tileRetrieverElement.appendChild(event.target);
-  event.target.removeEventListener('click', tileElementListener);
+  await checkTriple(id);
+  event.target.removeEventListener('click', (event) => tileClick(event, id));
+}
+
+/**
+ *
+ * @param {String} id
+ * @returns
+ */
+async function checkTriple(id) {
+  if (tiles.length < 3) {
+    return;
+  }
+
+  const threeMatchesArray = tiles.filter((t) => t.match(id.split('-')[1]));
+
+  if (threeMatchesArray.length === 3) {
+    for (const el of threeMatchesArray) {
+      const tileElementToRemove = document.querySelector(`#${el}`);
+      tileRetrieverElement.removeChild(tileElementToRemove);
+    }
+
+    tiles = tiles.filter((t) => !t.match(id.split('-')[1]));
+  }
 }
 
 /**
@@ -82,15 +108,19 @@ const renderInitialTiles = () => {
       (t) => t.count != Math.floor(TILE_COUNT / INITIAL_TILES_MATCH.length)
     );
 
-    if (colorFound) {
-      colorFound.count += 1;
-      // tileElement.style.background = `rgb(255, ${255 - Math.floor(topRand)}, ${
-      //   255 - Math.floor(topRand)
-      // })`;
-      tileElement.style.background = colorFound.color;
+    if (!colorFound) {
+      return;
     }
+    colorFound.count += 1;
+    // tileElement.style.background = `rgb(255, ${255 - Math.floor(topRand)}, ${
+    //   255 - Math.floor(topRand)
+    // })`;
+    tileElement.style.background = colorFound.color;
+    tileElement.id = `tile-${colorFound.id}-${i}`;
 
-    tileElement.addEventListener('click', tileElementListener);
+    tileElement.addEventListener('click', (event) =>
+      tileClick(event, tileElement.id)
+    );
 
     tileRetrieverElement.classList.add('tileRetriever');
 
