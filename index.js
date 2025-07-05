@@ -5,6 +5,19 @@ let tiles = [];
 
 const TILE_COUNT = 12;
 const LAYERS = 3;
+let isTilePressing = false;
+
+const GameStateEnum = {
+  Playing: 'playing',
+  Lose: 'lose',
+  Win: 'win',
+};
+
+const GameState = {
+  state: GameStateEnum.Playing,
+  get: () => this.state,
+  set: (state) => (this.state = state),
+};
 
 const INITIAL_TILES_MATCH = [
   {color: '#ffef5e', count: 0, id: 'yellow'},
@@ -34,15 +47,24 @@ const clamp = (min, value, max) => {
  * @param {String} id
  */
 async function tileClick(event, id) {
-  if (tiles.length >= 7) return;
+  if (tiles.length >= 7) {
+    return;
+  }
+
+  if (isTilePressing) return;
+
+  isTilePressing = true;
 
   const {left, top} = tileRetrieverElement.getBoundingClientRect();
   event.target.style.top = `${top + 10}px`;
   event.target.style.left = `${10 + left + 110 * tiles.length}px`;
   tiles.push(id);
+  await new Promise((res) => setTimeout(res, 100));
+
   event.target.style.position = 'static';
   tileRetrieverElement.appendChild(event.target);
   await checkTriple(id);
+  isTilePressing = false;
   event.target.removeEventListener('click', (event) => tileClick(event, id));
 }
 
@@ -65,13 +87,31 @@ async function checkTriple(id) {
     }
 
     tiles = tiles.filter((t) => !t.match(id.split('-')[1]));
+    return;
+  }
+
+  if (tiles.length >= 7) {
+    GameState.set(GameStateEnum.Lose);
+    displayLoseModal();
   }
 }
+
+const displayLoseModal = () => {
+  const modal = document.createElement('div');
+  modal.classList.add('loseModalContainer');
+  const modalChild = document.createElement('div');
+  modalChild.classList.add('loseModalCard');
+  modalChild.textContent = 'Please Refresh page to start the game again';
+  modal.appendChild(modalChild);
+  body.appendChild(modal);
+};
 
 /**
  * used to initialize the tiles before rendering the scene
  */
 const renderInitialTiles = () => {
+  GameState.set(GameStateEnum.Playing);
+
   for (let i = 0; i <= TILE_COUNT; i++) {
     const tileElement = document.createElement('div');
     tileElement.classList.add('tile');
